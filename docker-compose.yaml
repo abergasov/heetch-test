@@ -1,0 +1,46 @@
+version: '3'
+
+services:
+  postgresql:
+    image: postgis/postgis
+    environment:
+      POSTGRES_DB: zombies
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - ./local/init.sql:/docker-entrypoint-initdb.d/init.sql
+      #- ./local:/docker-entrypoint-initdb.d/
+    ports:
+      - "5432:5432"
+
+  tile38:
+    image: tile38/tile38
+    ports:
+      - "9851:9851"
+
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "2181:2181"
+    environment:
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+
+  kafka:
+    image: wurstmeister/kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_CREATE_TOPICS: "zombie_locations:10:1,captured_zombie:10:1"
+      KAFKA_ADVERTISED_HOST_NAME: 127.0.0.1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://:9094,OUTSIDE://localhost:9092
+      KAFKA_LISTENERS: INSIDE://:9094,OUTSIDE://:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+    depends_on:
+      - zookeeper
